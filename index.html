@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Лунные равнины — VRM Edition</title>
+<style>
+:root{color-scheme:dark;--gold:#ffd36e;--glass:rgba(13,22,49,.72)}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101b3b;color:#fff;font-family:system-ui,Segoe UI,sans-serif;touch-action:none}
+canvas{position:fixed;inset:0;display:block}
+#hud{position:fixed;z-index:3;top:env(safe-area-inset-top,12px);left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}
+.panel{background:var(--glass);border:1px solid #ffffff40;backdrop-filter:blur(12px);border-radius:16px;padding:11px 14px;box-shadow:0 8px 30px #0005}
+.stats{min-width:185px;font-size:13px}.meter{height:8px;background:#ffffff25;border-radius:8px;margin:5px 0 8px;overflow:hidden}.meter i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff718a,#ffc08b)}
+#stam i{background:linear-gradient(90deg,#4ce2a1,#d5ff8a)}
+button{font:inherit;color:white;border:1px solid #ffffff55;background:#ffffff18;border-radius:14px;padding:11px 17px}
+#menu{position:fixed;z-index:5;inset:0;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 80%,#293c77aa,transparent 65%),#07102777}
+#menu .box{width:min(560px,92vw);text-align:center;padding:30px 24px;border-radius:26px;background:#101a3bdc;border:1px solid #ffffff40;backdrop-filter:blur(18px);box-shadow:0 20px 80px #0008}
+h1{font:400 clamp(38px,9vw,70px)/1.05 Georgia,serif;margin:0 0 12px;background:linear-gradient(90deg,#fff,#ffd36e,#a9caff);color:transparent;background-clip:text}
+p{line-height:1.6;color:#dce6ff}.primary{background:linear-gradient(135deg,#ffb45e,#ff6d76);border:0;font-size:18px;font-weight:700;padding:14px 35px;border-radius:30px}
+#toast{position:fixed;z-index:4;top:22%;left:50%;transform:translate(-50%,-10px);opacity:0;transition:.25s;background:#101a3be8;padding:12px 22px;border-radius:24px;border:1px solid #ffffff55;white-space:nowrap;pointer-events:none}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#controls{position:fixed;z-index:3;bottom:18px;left:15px;right:15px;display:flex;justify-content:space-between;align-items:end;pointer-events:none}
+#stick{width:124px;height:124px;border-radius:50%;background:#ffffff18;border:1px solid #ffffff55;position:relative;pointer-events:auto;display:none}
+#nub{position:absolute;width:48px;height:48px;left:38px;top:38px;border-radius:50%;background:linear-gradient(135deg,#fff,#9dbfff);box-shadow:0 4px 15px #0008}
+.actions{display:flex;gap:10px;align-items:end;pointer-events:auto}
+.act{width:66px;height:66px;border-radius:50%;padding:5px;background:#182b56dd;border:1px solid #ffffff66}
+.act.big{width:78px;height:78px;background:#69465bdd;border-color:#ffd36e99}
+.act span{display:block;font-size:22px}
+#help{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);font-size:12px;color:#e4eaffaa;text-align:center;pointer-events:none}
+#load{position:fixed;z-index:6;inset:0;display:none;place-items:center;background:#08122bf2;text-align:center;padding:25px}
+#load .inner{width:min(440px,90vw)}#progress{height:9px;background:#ffffff22;border-radius:8px;overflow:hidden;margin:15px 0}#progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#76a9ff,#ffd36e);transition:width .2s}
+@media(pointer:coarse){#stick{display:block}#help{display:none}}
+</style>
+</head>
+<body>
+<div id="hud">
+ <div class="panel stats">💎 <b id="gems">0</b>/10 &nbsp; 👾 <b id="kills">0</b><div style="opacity:.8;margin-top:8px">Здоровье</div><div class="meter"><i id="hp"></i></div><div style="opacity:.8">Выносливость</div><div class="meter" id="stam"><i id="st"></i></div></div>
+ <button class="panel" id="pause">Ⅱ</button>
+</div>
+<div id="toast"></div>
+<div id="controls"><div id="stick"><div id="nub"></div></div><div class="actions"><button class="act" id="jump"><span>⤒</span>Прыжок</button><button class="act" id="skill"><span>✦</span>Навык</button><button class="act big" id="attack"><span>⚔</span>Удар</button></div></div>
+<div id="help">WASD — движение · Shift — бег · Пробел — прыжок · J — удар · E — навык · мышь — камера</div>
+<div id="menu"><div class="box"><h1>Лунные равнины</h1><p>VRM Edition · три персонажа · кристаллы · магия · ночной лес</p><p>Собери 10 лунных кристаллов, победи слизней и исследуй долину.</p><button class="primary" id="start">Начать игру</button><p style="font-size:12px;opacity:.65">При первом запуске загружаются встроенные 3D-модели.</p></div></div>
+<div id="load"><div class="inner"><h2>Подготавливаем лунный мир…</h2><p id="loadtxt">Загрузка персонажей</p><div id="progress"><i id="prog"></i></div><p id="loadpct">0%</p></div></div>
+<script type="application/octet-stream" id="vrm0"></script>
+<script type="application/octet-stream" id="vrm1"></script>
+<script type="application/octet-stream" id="vrm2"></script>
+<script type="application/octet-stream" id="ambience"></script>
+<script type="module">
+import * as THREE from "https://esm.sh/three@0.160.0";
+import {GLTFLoader} from "https://esm.sh/three@0.160.0/examples/jsm/loaders/GLTFLoader.js";
+import {VRMLoaderPlugin,VRMUtils} from "https://esm.sh/@pixiv/three-vrm@3.2.0?external=three";
+const $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const EMBEDDED_PARTS={"vrm0":2,"vrm1":2,"vrm2":2,"ambience":1};
+const embeddedCache={};
+async function getEmbeddedAsset(id){
+ if(embeddedCache[id]) return embeddedCache[id];
+ const total=EMBEDDED_PARTS[id];
+ if(!total) throw new Error("Unknown embedded asset: "+id);
+ const chunks=await Promise.all(Array.from({length:total},(_,i)=>fetch(`./${id}.part${i+1}.txt`).then(r=>{if(!r.ok)throw new Error("Не удалось загрузить "+id+" часть "+(i+1));return r.text()})));
+ const data=chunks.join("");
+ embeddedCache[id]=data;
+ return data;
+}
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:"high-performance"});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;document.body.prepend(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x9bbbe7);scene.fog=new THREE.Fog(0x9bbbe7,35,125);
+const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,250);
+scene.add(new THREE.HemisphereLight(0xc9e4ff,0x496044,1.35));
+const sun=new THREE.DirectionalLight(0xffe5bd,2.2);sun.position.set(-25,40,20);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-35;sun.shadow.camera.right=35;sun.shadow.camera.top=35;sun.shadow.camera.bottom=-35;scene.add(sun);
+const mat=(c,r=.8,e=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,emissive:e});
+const ground=new THREE.Mesh(new THREE.CircleGeometry(115,100),mat(0x639b60));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+const world=new THREE.Group();scene.add(world);
+const hillMat=mat(0x536b8c),treeTrunk=mat(0x5b4436),leafMat=mat(0x235c4a),leaf2=mat(0x387b58);
+for(let i=0;i<22;i++){let a=i/22*Math.PI*2,r=70+(i%4)*7,x=Math.cos(a)*r,z=Math.sin(a)*r;let h=12+(i*7%17);let m=new THREE.Mesh(new THREE.ConeGeometry(9,h,7),hillMat);m.position.set(x,h/2-1,z);world.add(m)}
+for(let i=0;i<230;i++){let a=Math.random()*Math.PI*2,r=10+Math.random()*67,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)<9)continue;let h=2.2+Math.random()*2.5;let trunk=new THREE.Mesh(new THREE.CylinderGeometry(.16,.25,h,6),treeTrunk);trunk.position.set(x,h/2,z);trunk.castShadow=true;world.add(trunk);let crown=new THREE.Mesh(new THREE.ConeGeometry(1.3+Math.random(),3.2+Math.random()*2,7),Math.random()>.5?leafMat:leaf2);crown.position.set(x,h+1,z);crown.castShadow=true;world.add(crown)}
+// moon and stars
+const moon=new THREE.Mesh(new THREE.SphereGeometry(8,32,24),new THREE.MeshBasicMaterial({color:0xf1edda}));moon.position.set(-42,48,-95);scene.add(moon);
+const starGeo=new THREE.BufferGeometry(),starPos=[];for(let i=0;i<900;i++){starPos.push((Math.random()-.5)*220,15+Math.random()*90,(Math.random()-.5)*220)}starGeo.setAttribute("position",new THREE.Float32BufferAttribute(starPos,3));scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:.28})));
+const crystals=[];for(let i=0;i<10;i++){let a=i/10*Math.PI*2+.4,r=12+Math.random()*48;let gem=new THREE.Mesh(new THREE.OctahedronGeometry(.55),new THREE.MeshStandardMaterial({color:0x63eaff,emissive:0x168abf,metalness:.3,roughness:.2}));gem.position.set(Math.cos(a)*r,1.1,Math.sin(a)*r);gem.scale.y=1.6;gem.castShadow=true;scene.add(gem);crystals.push(gem)}
+// Ambient audio is embedded in this one HTML file.
+let audioCtx=null;async function startAudio(){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();let raw=atob(await getEmbeddedAsset("ambience")),buf=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)buf[i]=raw.charCodeAt(i);let decoded=await audioCtx.decodeAudioData(buf.buffer);let src=audioCtx.createBufferSource();src.buffer=decoded;src.loop=true;let gain=audioCtx.createGain();gain.gain.value=.45;src.connect(gain).connect(audioCtx.destination);src.start()}catch(e){console.warn("Audio unavailable",e)}}
+const loader=new GLTFLoader();loader.register(p=>new VRMLoaderPlugin(p));
+async function loadVRM(index){let raw=atob(await getEmbeddedAsset("vrm"+index)),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);let url=URL.createObjectURL(new Blob([bytes],{type:"model/gltf-binary"}));try{let gltf=await loader.loadAsync(url);let vrm=gltf.userData.vrm;VRMUtils.removeUnnecessaryVertices(gltf.scene);VRMUtils.removeUnnecessaryJoints(gltf.scene);VRMUtils.rotateVRM0(vrm);vrm.scene.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false}});return vrm}finally{URL.revokeObjectURL(url)}}
+let avatars=[],enemies=[],loaded=0;
+function progress(label){loaded++;$("loadtxt").textContent=label;$("prog").style.width=(loaded/3*100)+"%";$("loadpct").textContent=Math.round(loaded/3*100)+"%"}
+const player={x:0,z:0,vx:0,vz:0,y:0,vy:0,face:0,hp:5,st:100,attack:0,skill:0,skillCd:0,inv:0};
+let started=false,paused=false,gems=0,kills=0,keys={},yaw=.55,pitch=.28,joy={x:0,y:0},last=performance.now(),time=0;
+function addEnemy(vrm,x,z){let root=vrm.scene;root.scale.setScalar(1.0);root.position.set(x,0,z);scene.add(root);enemies.push({vrm,root,x,z,hp:3,dead:0,hit:0})}
+function say(t){$("toast").textContent=t;$("toast").classList.add("show");clearTimeout(say.timer);say.timer=setTimeout(()=>$("toast").classList.remove("show"),2100)}
+async function init(){ $("load").style.display="grid";for(let i=0;i<3;i++){let v=await loadVRM(i);avatars.push(v);progress("Загружена модель "+(i+1)+" из 3")}let hero=avatars[0];hero.scene.scale.setScalar(1.05);scene.add(hero.scene);player.root=hero.scene;addEnemy(avatars[1],13,-8);addEnemy(avatars[2],-17,12);$("load").style.display="none";$("menu").style.display="none";started=true;await startAudio();say("Найди 10 кристаллов 💎")}
+function attack(){if(!started||paused||player.attack>0)return;player.attack=.38;let f={x:Math.sin(player.face),z:Math.cos(player.face)};for(let e of enemies){if(e.dead>0)continue;let dx=e.x-player.x,dz=e.z-player.z,d=Math.hypot(dx,dz);if(d<3&&(dx*f.x+dz*f.z)/Math.max(d,.01)>.0){e.hp--;e.hit=.25;if(e.hp<=0){e.dead=5;e.root.visible=false;kills++;$("kills").textContent=kills}}}}
+function skill(){if(!started||paused||player.skillCd>0)return;player.skill=.55;player.skillCd=7;for(let e of enemies){if(e.dead<=0&&Math.hypot(e.x-player.x,e.z-player.z)<5){e.hp-=2;e.hit=.35;if(e.hp<=0){e.dead=5;e.root.visible=false;kills++;$("kills").textContent=kills}}}say("Лунная волна!")}
+function step(dt){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)-joy.y,r=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+joy.x;let wx=-Math.sin(yaw)*f+Math.cos(yaw)*r,wz=-Math.cos(yaw)*f-Math.sin(yaw)*r,l=Math.hypot(wx,wz);if(l>1){wx/=l;wz/=l;l=1}let run=!!keys.ShiftLeft&&l>.1&&player.st>2;player.st=clamp(player.st+(run?-22:14)*dt,0,100);let speed=(run?6:3.5)*l;player.vx+=(wx*speed-player.vx)*(1-Math.exp(-dt*8));player.vz+=(wz*speed-player.vz)*(1-Math.exp(-dt*8));if(l>.1)player.face=Math.atan2(wx,wz);player.x+=player.vx*dt;player.z+=player.vz*dt;let rad=Math.hypot(player.x,player.z);if(rad>92){player.x*=92/rad;player.z*=92/rad}
+if(keys.Space&&player.y<=0){player.vy=7;keys.Space=false}player.vy-=17*dt;player.y=Math.max(0,player.y+player.vy*dt);if(player.y===0)player.vy=0;
+player.attack=Math.max(0,player.attack-dt);player.skill=Math.max(0,player.skill-dt);player.skillCd=Math.max(0,player.skillCd-dt);player.inv=Math.max(0,player.inv-dt);
+for(let i=0;i<crystals.length;i++){let g=crystals[i];if(!g.visible)continue;g.rotation.y+=dt*1.8;g.position.y=1.1+Math.sin(time*2+i)*.2;if(Math.hypot(g.position.x-player.x,g.position.z-player.z)<1.5){g.visible=false;gems++;$("gems").textContent=gems;say(gems===10?"Победа! Все кристаллы собраны!":"Кристалл найден!")}}
+for(let e of enemies){if(e.dead>0){e.dead-=dt;if(e.dead<=0){e.dead=0;e.hp=3;e.x=(Math.random()-.5)*70;e.z=(Math.random()-.5)*70;e.root.position.set(e.x,0,e.z);e.root.visible=true}continue}let dx=player.x-e.x,dz=player.z-e.z,d=Math.hypot(dx,dz);if(d<15&&d>1.3){e.x+=dx/d*1.4*dt;e.z+=dz/d*1.4*dt;e.root.position.x=e.x;e.root.position.z=e.z}if(d<1.5&&player.inv<=0){player.hp--;player.inv=1.1;if(player.hp<=0){player.hp=5;player.x=player.z=0;say("Ты возродился у начала долины")}}e.root.rotation.y=Math.atan2(dx,dz);if(e.hit>0)e.hit-=dt}
+$("hp").style.width=(player.hp/5*100)+"%";$("st").style.width=player.st+"%";player.root.position.set(player.x,player.y+Math.abs(Math.sin(time*9))*Math.min(.07,Math.hypot(player.vx,player.vz)*.02),player.z);player.root.rotation.y=player.face+Math.PI;for(let v of avatars)if(v)v.update(dt)}
+function animate(now){requestAnimationFrame(animate);let dt=Math.min(.04,(now-last)/1000);last=now;time+=dt;if(started&&!paused)step(dt);else if(player.root)avatars.forEach(v=>v.update(dt));if(player.root){let target=new THREE.Vector3(player.x+Math.sin(yaw)*Math.cos(pitch)*6,player.y+2.2+Math.sin(pitch)*6,player.z+Math.cos(yaw)*Math.cos(pitch)*6);camera.position.lerp(target,1-Math.exp(-dt*5));camera.lookAt(player.x,player.y+1.2,player.z)}else{camera.position.set(Math.sin(time*.12)*7,4,Math.cos(time*.12)*7);camera.lookAt(0,1,0)}renderer.render(scene,camera)}
+requestAnimationFrame(animate);
+$("start").onclick=()=>{if(started){paused=false;$("menu").style.display="none";$("menu").querySelector("h1").textContent="Лунные равнины";$("start").textContent="Начать игру";return}init().catch(e=>{console.error(e);$("loadtxt").textContent="Ошибка загрузки. Проверь интернет и обнови страницу."})};
+$("pause").onclick=()=>{if(!started)return;paused=!paused;$("menu").style.display=paused?"grid":"none";if(paused){$("menu").querySelector("h1").textContent="Пауза";$("menu").querySelector("p").textContent="Нажми «Продолжить», чтобы вернуться в игру";$("start").textContent="Продолжить"}else{$("menu").querySelector("h1").textContent="Лунные равнины";$("start").textContent="Начать игру"}};
+addEventListener("keydown",e=>{keys[e.code]=true;if(e.code==="KeyJ"||e.code==="KeyF")attack();if(e.code==="KeyE")skill();if(e.code==="Escape"&&started){paused=!paused;$("menu").style.display=paused?"grid":"none";$("start").textContent=paused?"Продолжить":"Начать игру"}});
+addEventListener("keyup",e=>keys[e.code]=false);
+$("attack").onpointerdown=e=>{e.preventDefault();attack()};$("skill").onpointerdown=e=>{e.preventDefault();skill()};$("jump").onpointerdown=e=>{e.preventDefault();keys.Space=true};
+let stick=$("stick"),nub=$("nub"),sid=null;function moveStick(e){let r=stick.getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,m=48,l=Math.hypot(dx,dy);if(l>m){dx*=m/l;dy*=m/l}joy.x=dx/m;joy.y=dy/m;nub.style.transform=`translate(${dx}px,${dy}px)`}
+stick.onpointerdown=e=>{sid=e.pointerId;stick.setPointerCapture(sid);moveStick(e)};stick.onpointermove=e=>{if(e.pointerId===sid)moveStick(e)};function stopStick(){sid=null;joy.x=joy.y=0;nub.style.transform=""}stick.onpointerup=stopStick;stick.onpointercancel=stopStick;
+let dragging=false,px=0,py=0;renderer.domElement.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"){dragging=true;px=e.clientX;py=e.clientY}});addEventListener("pointerup",()=>dragging=false);addEventListener("pointermove",e=>{if(dragging&&started&&!paused){yaw-=(e.clientX-px)*.006;pitch=clamp(pitch+(e.clientY-py)*.004,-.1,1.0);px=e.clientX;py=e.clientY}});
+let tx=0,ty=0;renderer.domElement.addEventListener("touchstart",e=>{if(e.touches.length){tx=e.touches[0].clientX;ty=e.touches[0].clientY}},{passive:true});renderer.domElement.addEventListener("touchmove",e=>{if(e.touches.length>0&&started&&!paused){let t=e.touches[0];yaw-=(t.clientX-tx)*.004;pitch=clamp(pitch+(t.clientY-ty)*.003,-.1,1);tx=t.clientX;ty=t.clientY}},{passive:true});
+addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body></html>
